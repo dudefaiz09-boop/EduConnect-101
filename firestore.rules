@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStaff() {
+      return isSignedIn() &&
+             (getUserData().role == "teacher" || getUserData().role == "staff");
+    }
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      // Allow listing students for everyone (chat directory) but filtering roles for staff
+      allow list: if isSignedIn();
+      allow create: if isSignedIn(); // Allow initial profile creation
+      allow update: if isOwner(userId) || isStaff();
+      allow delete: if isStaff();
+    }
+
+    // --- Attendance ---
+    match /attendance/{recordId} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow write: if isStaff();
+    }
+
+    // --- Announcements ---
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+
+    // --- Fees ---
+    match /fees/{feeId} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow write: if isStaff();
+    }
+
+    // --- Homework ---
+    match /homework/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+
+      match /submissions/{submissionId} {
+        allow read: if isStaff() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+        allow create: if isSignedIn();
+        allow update: if isStaff() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      }
+    }
+
+    // --- Performance ---
+    match /performance/{recordId} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow write: if isStaff();
+    }
+
+    // --- Timetables ---
+    match /timetables/{classId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+
+    // --- Library ---
+    match /library/{recordId} {
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isStaff();
+    }
+
+    // --- Messages ---
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if isSignedIn() && (chatId.contains(request.auth.uid));
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+    }
+  }
+}

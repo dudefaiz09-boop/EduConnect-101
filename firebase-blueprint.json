@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and role.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "staff", "admin"] },
+        "studentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "School-wide announcements.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorId": { "type": "string" }
+      }
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "Student attendance record.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["present", "absent", "late"] }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles listing roles and basic info."
+    },
+    "/announcements/{id}": {
+      "schema": "Announcement",
+      "description": "Public school announcements."
+    },
+    "/attendance/{id}": {
+      "schema": "Attendance",
+      "description": "Attendance tracking records."
+    }
+  }
+}

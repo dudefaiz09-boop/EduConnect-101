@@ -1,0 +1,42 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStaff() {
+      return isSignedIn() &&
+             (getUserData().role == "teacher" || getUserData().role == "staff");
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Library resources
+    match /library/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+
+    // Assignment submissions
+    match /homework/{homeworkId}/{studentId}/{allPaths=**} {
+      allow read: if isStaff() || (isSignedIn() && request.auth.uid == studentId);
+      allow write: if isSignedIn() && request.auth.uid == studentId;
+    }
+
+    // User profile photos
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}
